@@ -1,0 +1,119 @@
+---
+title: "MQII - Monitoria 5"
+author: "Sinara"
+date: "2024-04-03"
+output: html_document
+---
+
+# 1.  Média amostral
+
+Em um modelo de regressão com K = 1 e X~i~ = 1, temos Y = μ + e, isto é:
+```{r}
+# Dados fictícios
+set.seed(123)
+x <- rnorm(100)
+y <- 2 * x + rnorm(100)
+
+# Modelo apenas com o intercepto
+modelo <- lm(y ~ 1)
+
+```
+No modelo só com o intercepto, μ = E[Y]. Então, um estimador de mínimos quadrados não viesado é igual à média de Y:
+```{r}
+
+```
+
+
+# 2. Teorema de Gauss-Markov
+
+Os estimadores obtidos pelo método de mínimos quadrados ordinários serão os Melhores Estimadores Lineares Não Viesados (MELNV, ou BLUE - Best Linear Unbiased Estimator) se satisfazerem os 5 pressupostos de Gauss-Markov:
+
+1) Linearidade nos parâmetros: Relação Linear entre X e Y;
+
+2) Não colinearidade perfeita: As variáveis independentes não são colineares, ou seja, não existe uma combinação linear perfeita entre elas.
+
+3) Média condicional do erro igual zero: ou seja, E(e|X~i~) = 0.
+
+4) Homocedasticidade: A variabilidade dos erros é constante para qualquer X, ou seja, E(ei^2^)=σ^2^.
+
+5) Independência dos erros: Os erros são não autocorrelacionados, ou seja, E(e~i~e~j~) = 0: Não há relação entre valores ordenados dos erros segundo tempo ou espaço.
+
+* O MQO é não viesado se satisfazer 1, 2 e 3; e será o mais eficiente dentre os estimadores lineares se satisfazer 4 e 5.
+
+
+# 3. Mínimos Quadrados Generalizados (MQG)
+
+É aplicado quando a variância dos erros não é a mesma (heteroscedasticidade), ou quando há certa correlação entre os resíduos.
+```{r}
+#install.packages("nlme")
+library(nlme)
+
+# Dados fictícios
+x <- 1:100
+y <- 2*x + rnorm(100, mean = 0, sd = x)  # Variância dos erros aumenta com x
+
+# Modelo de regressão com MQG
+modelo <- gls(y ~ x, weights = varPower(form = ~ x))
+
+```
+* O argumento "weights = varPower(form = ~ x)" indica que os pesos devem ser calculados de acordo com uma função de potência da variável x, permitindo lidar com a heterocedasticidade.
+
+# 4. Medidas de Ajuste
+
+A medida de ajuste de regressão mais comum é o R-quadrado. Contudo, em R^2^ = 1 - [SSR (soma dos quadrados dos resíduos)/ SST (soma total dos quadrados), SST e SSE são estimadores viesados. Theil (1961) propõe o R^2^ ajustado:
+```{r}
+# Número de observações
+n <- 100
+
+# Dados fictícios
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+y <- 2*x1 + 3*x2 + rnorm(n)
+
+# Modelo de regressão múltipla
+modelo <- lm(y ~ x1 + x2)
+
+# R-quadrado
+r_quadrado <- summary(modelo)$r.squared
+r_quadrado
+
+# Número de variáveis independentes
+k <- length(coefficients(modelo)) - 1
+
+# R quadrado ajustado
+r_quadrado_aj <- 1 - ((1 - r_quadrado) * (n - 1) / (n - k - 1))
+r_quadrado_aj
+```
+* O R-quadrado ajustado leva em consideração a complexidade do modelo e penaliza a inclusão de variáveis desnecessárias.
+
+# 5. Multicolineariedade
+
+## 5.1. Quase Multicolineariedade
+
+Há uma forte correlação, mas não exata, entre as variáveis independentes no modelo.
+```{r}
+# Dados fictícios
+x1 <- rnorm(100)
+x2 <- 0.9*x1 + rnorm(100, sd = 0.1) 
+y <- 2*x1 + 3*x2 + rnorm(100)
+
+# Modelo de regressão
+modelo_quase_multicolinearidade <- lm(y ~ x1 + x2)
+
+```
+* As estimativas dos coeficientes são imprecisas e os erros-padrão são enganosamente pequenos.
+
+## 5.2. Multicolineariedade estrita
+
+Relação linear exata entre duas ou mais variáveis independentes no modelo.
+```{r}
+# Dados fictícios
+x1 <- rnorm(100)
+x2 <- x1 + rnorm(100, sd = 0.1) 
+y <- 2*x1 + 3*x2 + rnorm(100)
+
+# Modelo de regressão
+modelo_multicolinearidade <- lm(y ~ x1 + x2)
+
+```
+* Quanto mais colineares forem os regressores, pior será a precisão das estimativas de coeficientes individuais, pois é estastiticamente difícil separar o impacto de β~1~ e β~2~.

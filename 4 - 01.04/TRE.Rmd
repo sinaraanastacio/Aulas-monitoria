@@ -1,0 +1,81 @@
+---
+title: "MQII - Monitoria 3"
+author: "Sinara"
+date: "2024-03-19"
+output: html_document
+---
+
+QUESTÃO 1) Crie um dataframe com dados da PNADC usando a função `get_pnadc()` ou `read_pnadc()` do pacote PNADcIBGE. Em seguida, realize as seguintes manipulações:
+```{r}
+library(PNADcIBGE)
+pnadc <- get_pnadc(year=2019, interview=1, vars = c("UF", "V1032", "V2001", "V2007", "V2009", "V2010", "VD3005", "VD4016", "V4001", "V4028", "V4029", "V4032", "V4039"), design = FALSE)
+```
+
+(a) Realize uma filtragem na amostra, mantendo apenas os trabalhadores com carteira de trabalho assinada (V4029 == “Sim”);
+```{r}
+pnadc <- subset(pnadc, V4029 == "Sim")
+```
+
+(b) Crie uma variável em seu dataframe que represente o logaritmo do rendimento por hora (log_rend_hora), considerando como rendimento a variável VD4016 da PNADC;
+```{r}
+# Transformar rendimento (VD4016) e horas trabalhadas (V4039) em numeric
+pnadc$VD4016 <- as.numeric(pnadc$VD4016) #contém outliers
+pnadc$V4039 <- as.numeric(pnadc$V4039)
+
+# Criar variável rendimento hora
+pnadc$Rendimento <- pnadc$VD4016/4.33/pnadc$V4039
+pnadc$log_Rend_hora <- log(pnadc$Rendimento)
+```
+
+(c) Crie uma dummy em seu dataframe que indique se o indivíduo é branco (Branco);
+```{r}
+pnadc$Branco <- ifelse(pnadc$V2010 == "Branca", 1, 0)
+```
+
+(d) Crie uma dummy em seu dataframe que indique se o indivíduo é mulher (Mulher);
+```{r}
+pnadc$Mulher <- ifelse(pnadc$V2007 == "Mulher", 1, 0)
+```
+
+(e) Crie em seu dataframe uma variável que represente os anos de estudo que o indivíduo possui (Anos_est).
+```{r}
+pnadc$Anos_est <- ifelse(pnadc$VD3005 == "Sem instrução e menos de 1 ano de estudo", 0, pnadc$VD3005)
+pnadc$Anos_est <- substring(pnadc$VD3005, first = 1, last = 2)
+pnadc$Anos_est <- as.numeric(pnadc$VD3005) 
+```
+
+QUESTÃO 2) Calcule a média de log_rend_hora para indivíduos brancos e para indivíduos não-brancos.
+```{r}
+pnadc$log_Rend_hora <- as.numeric(pnadc$log_Rend_hora) 
+mean(pnadc$log_Rend_hora[pnadc$Branco == 1])
+mean(pnadc$log_Rend_hora[pnadc$Branco == 0])
+```
+
+QUESTÃO 3) Demonstre a lei geral das expectativas iteradas para mulheres brancas e não-brancas da amostra.
+```{r}
+# Média condicional do logaritmo do salário para mulheres brancas
+media_log_rend_mul_branca <- mean(pnadc$log_Rend_hora[pnadc$Mulher == 1 & pnadc$Branco == 1])
+
+# Média condicional do logaritmo do salário para mulheres não brancas
+media_log_rend_mul_NB <- mean(pnadc$log_Rend_hora[pnadc$Mulher == 1 & pnadc$Branco == 0])
+
+# Proporção de mulheres brancas
+prop_mul_branca <- sum(pnadc$Mulher == 1 & pnadc$Branco == 1) / sum(pnadc$Mulher == 1)
+
+# Proporção de mulheres não brancas
+#Crie "prop_hom_NB"
+prop_mul_NB <- 1 - prop_mul_branca
+
+# Média condicional do log do salário/hora usando a Lei Geral das Expectativas Iteradas
+media_log_rend_mul_branca*prop_mul_branca + media_log_rend_mul_NB*prop_mul_NB
+
+# Que é o mesmo que:
+mean(pnadc$log_Rend_hora[pnadc$Mulher == 1])
+```
+
+QUESTÃO 4) Desenvolva um modelo de regressão linear para uma subamostra de homens do Estado de Minas Gerais em que a variável dependente é log_rend_hora, enquanto as variáveis independentes são "Branco" e "Anos_est". Faça uma breve interpretação dos resultados.
+```{r}
+subset_pnadc <- subset(pnadc, Mulher == 0 & UF == "Minas Gerais")
+regressao <- lm(log_Rend_hora ~ Branco + Anos_est, data = subset_pnadc)
+summary(regressao)
+```

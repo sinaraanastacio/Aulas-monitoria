@@ -1,0 +1,169 @@
+---
+title: "Monitoria 7"
+author: "Sinara"
+date: "2024-04-26"
+output: html_document
+---
+
+1. Teorema 6.1: Lei Fraca dos Grandes Números
+  
+  À medida que o tamanho da amostra n aumenta, a probabilidade de a média das variáveis aleatórias estar próxima da média verdadeira se aproxima de 1. O estimador que converge em probabilidade é chamado de *consistente*.(Vem da teoria assintótica).
+```{r}
+# Função para simular lançamentos de uma moeda
+simular_lancamentos_moeda <- function(n, p) {
+  lancamentos <- rbinom(n, 1, p) # n lançamentos com probabilidade p de cara
+  return(mean(lancamentos)) # proporção de caras
+}
+
+# Parâmetros
+set.seed(123)
+n_lancamentos <- seq(50, 10000, by = 50)  # lançamentos em cada série
+prob_verdadeira <- 0.5  # Probabilidade verdadeira de cara da moeda
+n_replicacoes <- 300  # Número de replicatas
+
+# Simulação de uma série de lançamentos para cada número de lançamentos
+medias <- sapply(n_lancamentos, function(n) replicate(n_replicacoes, simular_lancamentos_moeda(n, prob_verdadeira)))
+
+# Plotar resultados
+plot(?, colMeans(medias), type = 'l', ylim = c(0.49, 0.51),
+     xlab = 'Número de lançamentos', ylab = 'Média das proporções de caras',
+     main = 'Convergência em Probabilidade')
+```
+No Hansen: Definição 6.1; Teorema 6.1; Teorema 6.2; e Definição 6.3.
+
+
+2. Teorema 6.2: Multivariate Lindeberg-Lévy Central Limit Theorem (CLT)
+
+  A distribuição limite da soma padronizada de variáveis aleatórias multivariadas independentes e identicamente distribuídas converge para uma distribuição normal multivariada N(0,V), desde que as variáveis aleatórias tenham momentos finitos de ordem suficientemente alta e os efeitos de dependência entre as variáveis aleatórias diminuam à medida que n aumenta.
+```{r}
+# Parâmetros
+set.seed(123)
+n <- 8000  # Tamanho da amostra
+d <- 2  # Número de dimensões
+mu <- rep(0, d)  # Média das variáveis aleatórias
+Sigma <- matrix(c(1, 0.8, 0.8, 1), nrow = d, ncol = d)  # Matriz de covariância
+n_replicatas <- 100  # Número de replicatas
+
+# Função para gerar amostras multivariadas
+gerar_amostra_multivariada <- function(n, mu, Sigma) {
+  return(mvtnorm::rmvnorm(n, mean = mu, sigma = Sigma))
+}
+
+# Simulação do Multivariado Lindeberg-Lévy (CLT)
+library(mvtnorm)
+medias <- sapply(seq(10, n, by = 10), function(m) {
+  replicate(n_replicatas, {
+    amostra <- gerar_amostra_multivariada(m, mu, Sigma)
+    mean(amostra)
+  })
+})
+
+# Plotagem dos resultados
+par(mfrow = c(2, 2))
+for (i in 1:4) {
+  hist(?[i,], main = paste("Histograma da dimensão", i), xlab = "Média Amostral", breaks = 80)
+}
+```
+No Hansen: Definição 6.2; Teorema 6.3; Teorema 6.9; e Teorema 6.10.
+  
+
+3. Dados em painel
+
+  Os dados em painel proporcionam mais informações, mais variabilidade, menos colinearidade entre as variáveis, mais graus de liberdade e mais eficiência, sendo mais adequados para estudar a dinâmica da mudança.
+ 
+  No exercício deste tópico, vamos utilizar um painel balanceado e curto. N = 27 estados do brasil e T = 10 (2010 a 2019)
+```{r}
+base <- read.table("base.txt", header = TRUE, sep = "\t")
+base <- as.data.frame(lapply(?, as.numeric))
+```
+ 
+  3.1. Analisando os dados
+  3.1.1. Correlação
+```{r}
+correlacao <- cor(base[,3:7], use = "pairwise.complete.obs")
+```
+
+  3.1.2. Funções de densidade
+```{r}
+for (i in 3:7) {
+  variavel <- names(base)[i]
+  plot(density(base[[variavel]], na.rm = TRUE), main = paste("Densidade de", variavel))
+}
+``` 
+
+  3.1.3. Logaritmizar variáveis
+```{r}
+base[, 3:7] <- log(base[, 3:7])
+```
+
+```{r}
+# Análise da correlação e funções de densidade após a logaritmização
+?
+# Melhorou?
+```
+  
+  Para estimar um modelo em que a variável dependente é o *pib* e as variáveis independependentes são *pib_d*, *abertura*, *desp_cor* e *pop*, poderiamos empregar diferentes abordagens:
+  
+  i) Séries de tempos individuais para os estados brasileiros;
+```{r}
+base_estado_1 <- subset(base, estado == 1)
+mqo_estado_1 <- lm(pib ~ pib_d + abertura + desp_cor + pop, data = base_estado_1)
+summary(mqo_estado_1)
+# mqo_estado_2, mqo_estado_3, etc.
+```
+
+  ii) Funções de corte transversal, sendo uma para cada ano;
+```{r}
+base_ano_2010 <- ?
+mqo_ano_2010 <- lm(pib ~ pib_d + abertura + desp_cor + pop, data = base_ano_2010)
+summary(mqo_ano_2010)
+# mqo_ano_2011, mqo_ano_2012, etc.
+```  
+
+  iii) Empilhar todas as observações e estimar um MQO geral (pooled OLS);
+```{r}
+mqo_pooled <- lm(pib ~ pib_d + abertura + desp_cor + pop, data = base)
+summary(mqo_pooled)
+# pode ser mal especificado pois camufla a hetegeneidade entre as unidades
+```  
+
+  iv) Modelo de MQO com variáveis dummies para efeitos fixos;
+```{r}
+fixed.dum <- lm(pib ~ pib_d + abertura + desp_cor + pop + factor(estado) - 1, data = base)
+
+# OBS: São 26 dummies, sendo o intercepto do primeiro estado usado como categoria base.
+```
+
+  iv) Modelos de efeitos não observados, que se divide em:
+    
+    A) Modelo de efeitos fixos
+  Permite que cada indivíduo tenha o próprio valor de intercepto (fixo)
+```{r}
+library(plm)
+ef_fixos <- plm(pib ~ pib_d + abertura + pop, data = base, index=c("estado", "ano"), model = "within")
+
+```
+
+    B) Modelo de efeitos aleatórios
+
+  Presume-se que os valores de intercepto dos 27 estados e sejam extraídos aleatoriamente de uma população maior de unidades
+```{r}
+ef_aleatorios <- # o modelo nesse caso é "random"
+
+```
+No Hansen: Tópicos 17.4, 17.6, 17.7 e 17.8.
+
+
+4. Teste de Hausman
+  Para decidir entre o modelo de efeitos fixos ou aleatórios, você pode realizar um teste de Hausman, onde a hipótese nula é que o modelo de efeitos aleatórios é preferido em comparação com a alternativa de efeitos fixos.
+```{r}
+#use a função "phtest()" do pacote "plm" para comparar os modelos
+```
+Lembrete: Se o valor-p for menor do que o nível de significância escolhido, rejeitamos a hipótese nula.
+No Hansen: Tópicos 17.24 e 17.25.
+
+Referências:
+  
+  Princentol University library. Panel Data Using R: Fixed-effects and Random-effects. Disponível em: <https://libguides.princeton.edu/R-Panel>. Acesso em: 26 de abr. de 2024.
+  
+  TORRES-REYNA, Oscar.  Getting Started in Fixed/Random Effects Models using R/RStudio. Disponível em: <https://www.princeton.edu/~otorres/Panel101R.pdf>. Acesso em: 26 de abr. de 2024.

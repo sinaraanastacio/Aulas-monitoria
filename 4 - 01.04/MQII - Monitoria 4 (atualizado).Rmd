@@ -1,0 +1,118 @@
+---
+title: "MQII - Monitoria 4"
+author: "Sinara"
+date: "2024-03-29"
+output: html_document
+---
+
+1.  Distribuição conjunta de probabilidade
+
+Descreve a probabilidade de ocorrência conjunta de diferentes eventos ou valores em um conjunto de variáveis aleatórias. Por exemplo, se tivermos duas variáveis aleatórias, X e Y, a distribuição conjunta de probabilidade descreveria a probabilidade de cada par de valores (x, y) que X e Y poderiam assumir.
+
+1.1. Criando o dataframe
+
+```{r}
+dados <- data.frame(
+  X = c(0, 0, 1, 1),
+  Y = c(0, 1, 0, 1),
+  Prob = c(0.1, 0.4, 0.2, 0.3)
+)
+print(dados)
+```
+
+1.2. Probabilidades 
+
+Pr(y = 0| x = 0) = Pr(y = 0, x = 0) / P(x = 0)
+
+```{r}
+pr_00 <- dados$Prob[dados$Y == 0 & dados$X == 0]/sum(dados$Prob[dados$X == 0])
+pr_01 <- 
+pr_10 <- 
+pr_11 <- 
+```
+
+1.3. Expectativas condicionais
+
+E(y|x = 0) = 0 × Pr(y = 0|x = 0) + 1 * Pr(y = 1|x = 0)
+```{r}
+e0 <- 0 * pr_00 + 1 * pr_10
+e1 <- 
+```
+
+E(y\^2\|x = 0) = Dá no mesmo, pois y == 0 ou 1
+```{r}
+eqd0 <- 0^2 * pr_00 + 1^2 * pr_10
+eqd1 <- 
+```
+
+1.4. Variâncias var(y\^2\|x = 0) = E(y\^2\|x = 0) − (E(y\|x = 0))\^2
+```{r}
+v0 <- eqd0 - e0^2
+v1 <- 
+```
+
+2.  No exercício 1, vimos como calcular as expectativas e variâncias tendo em mãos um dataframe contendo as probabilidades conjuntas associadas aos valores de X e Y. Mas como calcular essas probabilidades?
+```{r}
+# Dado um conjunto de dados com valores aleatórios para X e Y, com valores 0 ou 1...
+set.seed(123)
+n <- 1000
+dados <- data.frame(
+  X = sample(0:1, n, replace = TRUE),
+  Y = sample(0:1, n, replace = TRUE)
+)
+
+# As probabilidades conjuntas podem ser calculadas da seguinte forma:
+prob_conjunta <- table(dados$X, dados$Y) / n
+print(prob_conjunta)
+#linhas = X e colunas = Y
+```
+
+3.  Criando um identificador de domicílio para os dados da PNADC
+
+3.1. Abrir dados da PNADC
+```{r}
+dados <- read.table("pnadc.txt", header = TRUE, sep = "\t")
+```
+
+3.2. Variável rendimento/hora
+```{r}
+dados$VD4016 <- as.numeric(dados$VD4016)
+dados$V4039 <- as.numeric(dados$V4039)
+dados$Rend_hora <- dados$VD4016/4.33/dados$V4039
+```
+
+3.3. Utilizando um Identificador de Domicílio para criar um dummy que indica que o indivíduo mora no mesmo domicílio que um idoso
+```{r}
+library(dplyr)
+
+dados <- dados %>%
+  group_by(UPA, V1008, V1014) %>%
+  mutate(iddom = cur_group_id())
+
+dados$idoso <- ifelse(dados$V2009 >= 65, 1, 0)
+
+dados <- dados %>%
+  group_by(iddom) %>%
+  mutate(mora_idoso = max(idoso))
+```
+#Mais informações: <https://ftp.ibge.gov.br/Trabalho_e_Rendimento/Pesquisa_Nacional_por_Amostra_de_Domicilios_continua/Anual/Microdados/Trimestre/Documentacao_Geral/Chaves_PNADC.pdf> <https://rpubs.com/reinaldoufjf/AULA-6>
+
+3.4. Deixar apenas trabalhadores com carteira de trabalho assinada & pessoas com menos de 65 anos
+```{r}
+dados <- subset(dados, V4029 == "Sim")
+dados <- subset(dados, V2009 <= 65)
+```
+
+3.6. Rendimento/hora médio de indivíduos
+```{r}
+mean(dados$Rend_hora[dados$mora_idoso == 0])
+mean(dados$Rend_hora[dados$mora_idoso == 1])
+
+mean(dados$Rend_hora[dados$V2007 == "Mulher" & dados$mora_idoso == 0])
+mean(dados$Rend_hora[dados$V2007 == "Homem" & dados$mora_idoso == 0])
+
+mean(dados$Rend_hora[dados$V2007 == "Mulher" & dados$mora_idoso == 1])
+mean(dados$Rend_hora[dados$V2007 == "Homem" & dados$mora_idoso == 1])
+
+#Dá pra inferir alguma coisa a partir desses resultados?
+```

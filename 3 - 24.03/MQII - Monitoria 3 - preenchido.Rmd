@@ -1,0 +1,199 @@
+---
+title: "MQII - Monitoria 3"
+author: "Sinara"
+date: "2024-03-19"
+output: html_document
+---
+
+1. Introdução 
+  
+Na última monitoria, exploramos a execução de uma regressão linear e a visualização dos resultados da projeção.
+No modelo Y = Xbeta + e, onde Y e X são variáveis aleatórias e (Yi, Xi) representam as observações para ( i = 1, 2, ... n), assumimos uma distribuição normal para (Yi, Xi).
+O beta calculado (estimador amostral) é conhecido como Mínimos Quadrados Ordinários (MQO ou OLS).
+  
+  
+2. Organizar dados
+
+2.1. Abrir xlsx
+ 
+  Os dados são da Pesquisa da População Atual (Current Population Survey - CPS), que é uma pesquisa mensal de aproximadamente 57.000 domicílios nos Estados Unidos.
+```{r}
+library(readxl)
+dados <- read_excel("dados_trab.xlsx")
+```
+
+2.2. Filtrar homens & brancos
+```{r}
+dados_filtrados <- subset(dados, dados[,11] == 1 & dados[,2] == 0)
+```
+
+2.3. Criar variáveis para a regressão
+```{r}
+dados_filtrados$lnwage <- log(dados_filtrados[,5]/(dados_filtrados[,6]*dados_filtrados[,7])) #log do salário/hora (salário anual * semanas trabalhadas por ano)/horas trabalhadas por mês)
+dados_filtrados[,13] <- dados_filtrados$lnwage #arrumando o nome da variável
+
+dados_filtrados$experience <- dados_filtrados[, 1] - dados_filtrados[, 4] - 6 # proxy da experiência
+dados_filtrados[,14] <- dados_filtrados$experience #arrumando o nome da variável
+```
+
+2.4. Objetos para a regressão
+```{r}
+Y <- dados_filtrados$lnwage
+X1 <- dados_filtrados$education
+X2 <- dados_filtrados$experience
+```
+
+
+3. Estatísticas da amostra (serão utilizadas para estimar os Betas)
+```{r}
+# Tamanho da amostra
+n <- length(Y)
+
+# Médias das variáveis
+media_Y <- mean(Y)
+media_X1 <- mean(X1)
+media_X2 <- mean(X2)
+```
+
+
+4. Coeficientes para um regressor (k = 1) - Regressão linear simples
+```{r}
+# Desvios em relação à média
+desv_X1 <- X1 - media_X1
+desv_Y <- Y - media_Y
+
+# Covariância entre X1 e Y
+soma_produtos_cruzados <- sum(desv_X1 * desv_Y)
+covariancia_X1Y <- soma_produtos_cruzados / (n - 1)
+
+# Variância de X1
+soma_quadrados_desvios_X1 <- sum(desv_X1^2) #soma dos quadrados dos desvios
+variancia_X1 <- soma_quadrados_desvios_X1 / (n - 1)
+
+# Calcular os coeficientes beta0 e beta1 estimado
+beta1 <- covariancia_X1Y / variancia_X1
+beta0 <- media_Y - beta1 * media_X1
+
+#Resultados
+print(beta0)
+print(beta1)
+```
+
+  Que é o mesmo que:
+```{r}
+modelo1 <- lm(Y ~ X1)
+summary(modelo1)
+```
+OBS: beta1 é a inclinação da reta (ΔY/ΔX) e beta0 é a interseção da reta com o eixo y.
+
+5. Coeficientes para mais de um regressor (k > 1) - Regressão linear múltipla
+```{r}
+# Somas
+soma_X1 <- sum(X1)
+soma_X2 <- sum(X2)
+soma_Y <- sum(Y)
+
+# Somas dos produtos
+soma_X1Y <- sum(X1 * Y)
+soma_X2Y <- sum(X2 * Y)
+soma_X1X2 <- sum(X1 * X2)
+
+# Produto das somas dividido por n
+prod_s_X1Y <- (soma_X1 * soma_Y)/n
+prod_s_X2Y <- (soma_X2 * soma_Y)/n
+prod_s_X1X2 <- (soma_X1 * soma_X2)/n
+
+# Covariância
+cov_X1Y <- soma_X1Y - prod_s_X1Y
+cov_X2Y <- soma_X2Y - prod_s_X2Y
+cov_X1X2 <- soma_X1X2 - prod_s_X1X2
+
+# Somas dos quadrados
+soma_X1_sq <- sum(X1^2)
+soma_X2_sq <- sum(X2^2)
+
+# Quadrado das somas dividido por n
+sq_soma_X1 <- (soma_X1^2)/n
+sq_soma_X2 <- (soma_X2^2)/n
+
+# Soma dos quadrados - quadrados das somas divido por n
+sqt_X1 <- soma_X1_sq - sq_soma_X1
+sqt_X2 <- soma_X2_sq - sq_soma_X2
+
+# Calculando os coeficientes de regressão estimados para X1 e X2
+beta1 <- (sqt_X2 * cov_X1Y - cov_X1X2 * cov_X2Y)/(sqt_X1 * sqt_X2 - (cov_X1X2)^2)
+beta2 <- (sqt_X1 * cov_X2Y - cov_X1X2 * cov_X1Y)/(sqt_X1 * sqt_X2 - (cov_X1X2)^2)
+beta0 <- media_Y -  beta1 * media_X1 - beta2 * media_X2
+
+# Resultados
+print(beta0)
+print(beta1) 
+print(beta2)
+```
+
+  Que é o mesmo que:
+```{r}
+modelo2 <- lm(Y ~ X1 + X2)
+summary(modelo2)
+```
+
+
+6. Resíduos dos Mínimos Quadrados
+  
+6.1. Média amostral dos resíduos igual a zero
+```{r}
+residuos <- residuals(modelo2) # Resíduos do modelo
+mean(residuos) # Média dos resíduos
+```
+  A condição de os resíduos terem média igual a zero é uma propriedade desejável para um modelo de regressão linear, mas não é uma regra rígida. Muitas vezes é assumida ao interpretar os resultados da regressão.
+
+6.2. Homocedasticidade
+  
+  Em modelos lineares, temos o pressuposto de que a variabilidade dos erros é constante em todos os níveis das variáveis independentes. Como observar isso?
+```{r}
+residuos_quadrado <- residuos^2
+
+# Gráfico de dispersão dos resíduos ao quadrado em relação às variáveis independentes
+plot(X1, residuos_quadrado, xlab = "X1", ylab = "Resíduos ao Quadrado", main = "Resíduos ao Quadrado vs. X1")
+plot(X2, residuos_quadrado, xlab = "X2", ylab = "Resíduos ao Quadrado", main = "Resíduos ao Quadrado vs. X2")
+```
+  Quando há homocedasticidade, os pontos de resíduos devem estar distribuídos aleatoriamente ao redor da linha horizontal em y = 0 (representando a ausência de padrão na variância dos resíduos).
+
+6.3. Não autocorrelação dos resíduos
+  
+  Se os resíduos exibirem autocorrelação significativa, as estimativas dos coeficientes de regressão podem ser imprecisas. Se houver autocorrelação nos resíduos, podemos observar padrões sistemáticos nos resíduos ao longo do tempo.
+```{r}
+plot(residuos, type = "l", main = "Resíduos vs. Ordem das Observações")
+```
+  Se os resíduos parecerem aleatórios, sem nenhuma estrutura discernível, isso sugere que não há autocorrelação nos resíduos.
+
+
+7. Coeficiente de determinação ou R-quadrado
+  
+  Representa a fração da variabilidade da variável dependente que é explicada pelos regressores incluídos no modelo de regressão. Seus valores variam entre 0 e 1, onde 0 indica que o modelo não consegue explicar nenhuma variação nos dados, enquanto 1 indica que o modelo é capaz de explicar toda a variação dos dados.
+```{r}
+# Soma dos quadrados dos resíduos
+sqres <- sum(residuos^2)
+
+# Soma dos quadrados dos desvios de Y em relação à média
+stq <- sum((Y - media_Y)^2)
+
+# R-quadrado
+1 - (sqres / stq)
+```
+
+
+8. Frish-Waugh-Lowel (FWL)
+  
+  FWL é usada para decompor os efeitos de variáveis independentes em um modelo de regressão linear múltipla, permitindo isolar o efeito de uma variável de interesse, controlando para outras variáveis independentes.
+```{r}
+# Residualizar as variáveis dependentes e independentes
+residuos_Y <- residuals(lm(Y ~ X1 + X2))
+residuos_X1 <- residuals(lm(X1 ~ X2))
+residuos_X2 <- residuals(lm(X2 ~ X1))
+
+# Reestimar o modelo com os resíduos como variáveis dependentes
+modelo_FWL_Y <- lm(residuos_Y ~ residuos_X1 + residuos_X2)
+summary(modelo_FWL_Y)
+```
+  Os coeficientes estimados para as variáveis independentes residuais indicam a relação entre esses resíduos e a variável dependente residual. Um coeficiente positivo indica que um aumento nos resíduos da variável independente está associado a um aumento nos resíduos da variável dependente, e vice-versa.

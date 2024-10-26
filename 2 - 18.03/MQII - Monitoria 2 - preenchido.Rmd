@@ -1,0 +1,187 @@
+---
+title: "MQII - Monitoria 2"
+author: "Sinara"
+date: "2024-03-16"
+output: html_document
+---
+
+1. Introdução
+  1.1. Criando conjunto de dados fictícios para os primeiros exercícios
+```{r}
+dados_fic <- data.frame(
+  Nome = c("Ana", "Carlos", "Mariana", "Pedro", "Julia", "Fernando", "Jamile", "Maria", "Tiago", "Josias", "Marcos"),
+  Genero = c("Mulher", "Homem", "Mulher", "Homem", "Mulher", "Homem", "Mulher", "Mulher", "Homem", "Homem", "Homem"),
+  Cor_Raca = c("NB", "NB", "NB", "B", "B", "NB", "B", "NB", "B", "NB", "B"), #Dado que "B" == Branco e "NB" é não branco
+  Sal_hora = c(8, 8.5, 9, 7.7, 10, 9, 8, 7, 8, 7.5, 10),
+  Valores = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+```
+
+  1.2. Criando dummies
+Uma dummy é uma variável binária que indica a ausência (valor 0) ou presença (valor 1) de uma determinada característica em uma observação.
+   1.2.1 Dummy de Homem
+```{r}
+dados_fic$Homem <- ifelse(dados_fic$Genero == "Homem", 1, 0)
+```
+
+   1.2.2. Dummy de Branco
+#CRIE a dummy "Branco"
+```{r}
+dados_fic$Branco <- ifelse(dados_fic$Cor_Raca == "B", 1, 0)
+```
+
+  1.3. Logaritmizando variáveis
+   1.3.1. Log de Valores (relembrando monitoria passada)
+```{r}
+dados_fic$log_Valores <- log(dados_fic$Valores)
+```
+
+  1.3.1. Log do salário hora
+## CRIE a variável “log_Sal_hora”
+```{r}
+dados_fic$log_Sal_hora <- log(dados_fic$Sal_hora)
+```
+
+  1.4. Média de Valores
+```{r}
+mean(dados_fic$Valores)
+```
+  
+2. Lei simples das expectativas iteradas
+A expectativa da expectativa condicional é igual à expectativa incondicional.
+```{r}
+# Média condicional do logaritmo do salário para homens
+media_log_salario_homem <- mean(dados_fic$log_Sal_hora[dados_fic$Homem == 1])
+
+# Média condicional do logaritmo do salário para mulheres
+#CRIE o objeto media_log_salario_mulher
+media_log_salario_mulher <- mean(dados_fic$log_Sal_hora[dados_fic$Homem == 0])
+
+# Proporção de homens
+prop_homens <- mean(dados_fic$Homem)
+
+# Proporção de mulheres
+prop_mulheres <- 1 - prop_homens
+
+# Expectativa das expectativas condicionais
+media_log_salario_homem * prop_homens + media_log_salario_mulher * prop_mulheres
+
+# Que é o mesmo que a expectativa incondicional:
+#CALCULE a média do log_Sal_hora da amostra
+mean(dados_fic$log_Sal_hora)
+```
+
+
+3. Lei geral das expectativas iteradas
+A lei geral das expectativas iteradas permite dois conjuntos de variáveis condicionantes. Nesse caso, o menor conjunto de informações ganha.
+```{r}
+# Média condicional do logaritmo do salário para homens brancos
+media_log_sal_hom_branco <- mean(dados_fic$log_Sal_hora[dados_fic$Homem == 1 & dados_fic$Branco == 1])
+
+# Média condicional do logaritmo do salário para homens não brancos
+media_log_sal_hom_NB <- mean(dados_fic$log_Sal_hora[dados_fic$Homem == 1 & dados_fic$Branco == 0])
+
+# Proporção de homens brancos
+prop_hom_brancos <- sum(dados_fic$Homem == 1 & dados_fic$Branco == 1) / sum(dados_fic$Homem == 1)
+
+# Proporção de homens não brancos
+#Crie "prop_hom_NB"
+prop_hom_NB <- 1 - prop_hom_brancos
+
+# Média condicional do log do salário/hora usando a Lei Geral das Expectativas Iteradas
+media_log_sal_hom_branco*prop_hom_brancos + media_log_sal_hom_NB*prop_hom_NB
+
+# Que é o mesmo que:
+mean(dados_fic$log_Sal_hora[dados_fic$Homem == 1])
+```
+
+
+4. Projeções do log do salário sobre Educação (Figura 2.6a - Cap. 2 do Hansen)
+Os dados são da Pesquisa da População Atual (Current Population Survey - CPS), que é uma pesquisa mensal de aproximadamente 57.000 domicílios nos Estados Unidos.
+  4.1. Abrir base e criar variável dependente
+```{r}
+dados <- read.table("dados_trab.txt")
+dados$lnwage <- log(dados[,5]/(dados[,6]*dados[,7])) #log do salário hora
+dados <- subset(dados, dados[,11] == 1 & dados[,2] == 0) #filtrando homens & brancos
+Y <- dados$lnwage
+```
+
+  4.2. Variável independente
+```{r}
+x <- dados$V4 #anos de estudo
+edu_pontos <- c(4,6,8,9,10,11,12,13,14,16,18,20)
+xfit <- seq(1,25,1) 
+```
+
+  4.3. Estimativas
+```{r}
+# Média Condicional
+media <- sapply(edu_pontos, function(edu) mean(Y[x == edu]))
+
+# Regresão Linear
+regressao <- lm(Y ~ x)
+summary(regressao)
+# A cada ano de educação, há um aumento médio de 11% nos salários.
+f1 <- predict(regressao, newdata = data.frame(x = xfit)) #Valores preditos
+
+# Spline Linear
+library(splines)
+spline <- lm(Y ~ ns(x, knots = 9))
+f2 <- predict(spline, newdata = data.frame(x = xfit)) #Valores preditos
+```
+OBS: O valor-p testa se um coeficiente é significativo (diferente de zero). Um valor-p baixo (< 0,05) rejeita a hipótese nula, indicando uma relação significativa entre a variável preditora e a resposta.
+  
+  4.4. Plotagem
+```{r}
+library(ggplot2)
+ggplot() +
+  geom_point(aes(x = edu_pontos, y = media), color = "black", shape = 19, size = 3, na.rm = TRUE) + #Média condicional
+  geom_line(aes(x = xfit, y = f1), linetype = "dashed", color = "black", size = 1, na.rm = TRUE) + #Projeção linear
+  geom_line(aes(x = xfit, y = f2), color = "black", size = 1, na.rm = TRUE) +
+  labs(x = "Educação (Anos)", y = "Log Salário por Hora") + #Spline linear
+  theme_minimal()
+```
+
+
+5. Projeções do log do salário sobre a experiência (Figura 2.6.b - Cap. 2 do Hansen)
+  5.1. Variáveis independentes
+```{r}
+x <- dados[, 1] - dados[, 4] - 6 # proxy da experiência (idade - anos de estudo - 6)
+xfit <- seq(0,50,0.5)
+xfit2 <- xfit^2
+x2 <- x^2
+```
+
+  5.2. Estimativas
+```{r}
+# Projeção Linear
+regressao <- lm(Y ~ x) # Modelo de regressão linear
+summary(regressao)
+# A cada ano de experiência, há um aumento de aproximadamente 0,6% no rendimento
+f1 <- predict(regressao, newdata = data.frame(x = xfit))
+
+# Projeção Quadrática
+regressao_quad <- lm(Y ~ x + x2)
+summary(regressao_quad)
+# A cada ano de experiência, há um aumento de aproximadamente 0,5% no rendimento mas há um redução correspondente à experiência quadrada.
+f2 <- predict(regressao_quad, newdata = data.frame(x = xfit, x2 = xfit2))
+
+## Expectativa condicional por Estimação Linear Não Paramétrica Local
+loess <- loess(Y ~ x, span = 0.75)
+f3 <- predict(loess, newdata = data.frame(x = xfit))
+```
+
+  5.3. Plotagem
+```{r}
+library(ggplot2)
+
+ggplot() +
+  aes(x = xfit) +
+  geom_line(aes(y = f1), color = "red", size = 0.5) + #Projeção linear
+  geom_line(aes(y = f2), color = "blue", size = 0.5) + #Projeção quadrática
+  geom_line(aes(y = f3), color = "black", size = 0.5) + #Expectativa condicional
+    labs(x = "Experiência no mercado de trabalho (anos)",
+       y = "Log do Salário/Hora") +
+  theme_minimal() +
+  theme(axis.line = element_line(),
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+```
