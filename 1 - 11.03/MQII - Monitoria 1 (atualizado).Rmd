@@ -1,0 +1,290 @@
+---
+title: "MQII - Monitoria 1"
+author: "Sinara"
+date: "2024-03-04"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+1. Fundamentos
+WICKHAM, Hadley; ÇETINKAYA-RUNDEL, Mine; GROLEMUND, Garrett. R for data science. " O'Reilly Media, Inc.", 2023. Disponível em:<https://r4ds.had.co.nz/>. Acesso em: 06 de mar. de 2024.
+
+Hanck, Christoph; et al.  Introduction to Econometrics with R. 2024. Disponível em: <https://www.econometrics-with-r.org/>. Acesso em: 06 de mar. de 2024.
+
+Repositório: <https://github.com/>.
+
+```{r}
+objeto <- "oi"
+```
+
+2. Tipos de dados no R
+```{r}
+# Numérico
+idade <- 25 
+
+# Caracter (string) - informações de texto
+nome <- "Maria"
+cidade <- 'São Paulo'
+
+# Fator
+genero <- factor(c("Masculino", "Feminino", "Masculino")) #tem níveis pré definidos
+
+# Vetor
+notas <- c(85, 90, 78, 92, 88)
+
+# Matriz
+matriz <- matrix(c(1, 2, 3, 4, 5, 6), nrow = 2, ncol = 3)
+
+#Dataframe
+dados <- data.frame(
+  Nome = c("Ana", "Carlos", "Mariana"),
+  Idade = c(28, 35, 30),
+  Nota = c(90, 85, 88) )
+```
+
+
+3. Operadores aritméticos
+```{r}
+soma <- 5 + 3
+diferenca <- 10 - 4
+#etc.
+```
+Experiência ao quadrado: a relação entre experiência de trabalho e rendimento não é linear. Inicialmente, ganhos de experiência podem resultar em grandes melhorias no desempenho, mas à medida que o tempo passa, esses ganhos podem diminuir.
+
+
+4. Operadores lógicos
+```{r}
+resultado <- (8 > 5)
+resultado <- (3 < 7)
+resultado <- (10 >= 8)
+# outros: ==, !=, etc.
+```
+
+# Exemplo:
+```{r}
+# Vetor de números
+numeros <- c(10, 5, 20, 8, 15)
+ 
+ # Verificando quais números NÃO são maiores que 15
+numeros <= 15
+```
+
+
+5. Funções aritméticas
+```{r}
+# Vetor de números
+valores <- c(2, 4, 2, 8, 4, 10, 2)
+
+soma <- sum(valores)
+media <- mean(valores)
+comprimento <- length(valores)
+desvio_padrão <- sd(valores)
+#etc.
+```
+
+
+6. Excluir objetos
+```{r}
+# Listar objetos
+ls()
+```
+
+```{r}
+# Criando um objeto chamado "meu_objeto"
+meu_objeto <- "indesejado"
+
+# Excluindo o objeto
+rm(meu_objeto)
+```
+
+```{r}
+# Limpar ambiente
+rm(list = ls()) 
+```
+
+
+7. Trabalhando com dados da PNADC
+7.1. Baixar pela função
+```{r}
+install.packages("PNADcIBGE")
+```
+
+```{r}
+library(PNADcIBGE)
+pnadc <- get_pnadc(year=2022, interview=1, vars = c("UF", "V1032", "V2001", "V2007", "V2009", "V2010", "VD3005", "VD4016", "V4001", "V4028", "V4029", "V4032", "V4039"), design = FALSE)
+```
+interview - valores de 1 a 5
+
+Na base de dados da PNADC, cada observação (representada pelas linhas) corresponde a um indivíduo, enquanto as colunas representam as características (ou variáveis) associadas a esses indivíduos. Trata-se de um conjunto de dados de seção transversal (cross section), em que as observações são coletadas em um único momento no tempo.
+
+7.2. Ajuda sobre pacotes
+```{r}
+# Para obter ajuda sobre o pacote PNADcIBGE
+help(PNADcIBGE)
+
+# Para obter ajuda sobre a função get_pnadc
+help(PNADcIBGE::get_pnadc)
+```
+  Ou visite a documentação do pacote R em <https://cran.r-project.org/>.
+
+  Bases e dicionários das variáveis PNAD estão disponíveis nos links:
+Visita: <https://www.ibge.gov.br/estatisticas/downloads-estatisticas.html?caminho=Trabalho_e_Rendimento/Pesquisa_Nacional_por_Amostra_de_Domicilios_continua/Anual/Microdados/Visita>
+Trimestre: <https://www.ibge.gov.br/estatisticas/downloads-estatisticas.html?caminho=Trabalho_e_Rendimento/Pesquisa_Nacional_por_Amostra_de_Domicilios_continua/Anual/Microdados/Trimestre>
+
+7.3. Abrir dados PNADC offline (se não conseguir puxar online)
+7.3.1. Por read_pnadc
+```{r}
+library(PNADcIBGE)
+pnadc <- read_pnadc("PNADC_2022_visita1.txt", "input_PNADC_2022_visita1_20231129.txt", vars = c("UF", "V1032", "V2001", "V2007", "V2009", "V2010", "VD3005", "VD4016", "V4001", "V4028", "V4029", "V4032", "V4039"))
+```
+
+7.3.2. Puxar txt limpo
+```{r}
+pnadc <- read.table("pnadc.txt", header = TRUE, sep = "\t")
+```
+
+8. Salvando dados
+```{r}
+# Identificar diretório atual de trabalho
+getwd()
+```
+
+```{r}
+#Modificar diretório atual
+setwd("C:/Caminho/Para/Seu/Novo/Diretorio")
+```
+
+```{r}
+#Salvar em TXT
+write.table(pnadc, "pnadc.txt", sep="\t", row.names=FALSE)
+
+## Em pasta específica
+write.table(pnadc, "Caminho/do/diretório/desejado/pnadc.txt", sep="\t", row.names=FALSE)
+
+# Salvar em CSV
+write.csv(pnadc, "pnadc.csv", row.names=FALSE)
+```
+
+9. Abrir dados
+```{r}
+#Abrir TXT
+pnadc <- read.table("pnadc.txt", header = TRUE, sep = "\t")
+
+#Abrir CSV
+pnadc <- read.csv("pnadc.csv")
+```
+
+
+10. Dados em painel
+  Combina unidades observadas em múltiplos períodos de tempo.
+```{r}
+install.packages("plm")
+```
+
+```{r}
+library(plm)
+data("Grunfeld")
+```
+
+
+11. Séries de tempo
+  Capturam o comportamento de uma variável ou conjunto de variáveis ao longo do tempo. Tem diferentes frequências. Pode ser segundos (tipo ações), minutos, horas, meses (muitas variáveis econômicas).
+```{r}
+install.packages("datasets")
+```
+
+```{r}
+library(datasets)
+data("AirPassengers")
+head(AirPassengers)
+```
+
+### CAUSALIDADE ###
+  Na análise de efeitos causais, seguimos a ideia de "ceteris paribus", que significa que o efeito de uma variável sobre outra é isolado, mantendo as demais constantes. No entanto, é difícil estimar esse efeito na prática, já que é raro observar mudanças em uma variável enquanto todas as outras permanecem constantes.
+  A Economia busca determinar o efeito causal de uma mudança na variável x sobre a variável de interesse y. Para ilustrar esse conceito, podemos começar com a compreensão da esperança condicional. Um exemplo pode ser a análise dos rendimentos em uma amostra e suas distribuições de probabilidade. Neste exercício, empregaremos dados da PNADC. Contudo, antes de produzir os gráficos, é necessário ajustar as variáveis.
+1. Manter apenas trabalhadores com carteira de trabalho assinada
+```{r}
+pnadc <- subset(pnadc, V4029 == "Sim")
+```
+
+2. Rendimento
+```{r}
+# Transformar rendimento (vd4016) e horas trabalhadas (V4039) em numeric
+pnadc$VD4016 <- as.numeric(pnadc$VD4016) #contém outliers
+pnadc$V4039 <- as.numeric(pnadc$V4039)
+
+# Criar variável rendimento hora
+pnadc$Rendimento <- pnadc$VD4016/4.33/pnadc$V4039
+pnadc$ln_Rend_hora <- log(pnadc$Rendimento)
+```
+
+  2.1. Densidade da variável ln_Rend_hora
+```{r}
+# Calcular a densidade
+densidade <- density(pnadc$ln_Rend_hora)
+
+# Plotar a densidade
+plot(densidade, main = "Densidade da Variável ln_Rend_hora", xlab = "ln(Rendimento por Hora)", ylab = "Densidade", col = "skyblue")
+```
+
+  2.2. Densidade da variável ln_Rend_hora por gênero
+```{r}
+# Densidade de probabilidade para homens
+dados_homens <- pnadc[pnadc$V2007 == "Homem", ]
+densidade_homens <- density(dados_homens$ln_Rend_hora)
+
+# Densidade de probabilidade para mulheres
+dados_mulheres <- pnadc[pnadc$V2007 == "Mulher", ]
+densidade_mulheres <- density(dados_mulheres$ln_Rend_hora)
+
+## Dataframe para armazenar os dados de densidade
+dados_densidade <- data.frame(
+  Densidade = c(densidade_homens$y, densidade_mulheres$y),
+  ln_Rend_hora = c(densidade_homens$x, densidade_mulheres$x),
+  Sexo = rep(c("Homens", "Mulheres"), each = length(densidade_homens$x))
+)
+```
+
+  2.3. Plotar as densidades no ggplot
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+ggplot(dados_densidade, aes(x = ln_Rend_hora, y = Densidade, color = Sexo)) +
+  geom_line() +
+  labs(title = "Densidade da Variável ln_Rend_hora por Sexo",
+       x = "ln(Rendimento por Hora)",
+       y = "Densidade") +
+  theme_minimal()
+```
+  
+4. Escolaridade  
+  Focar nas médias condicionais facilita comparações entre grupos, mas entender quando essa relação é causal é desafiador. Em estudos sobre escolaridade e rendimento, por exemplo, tentamos determinar quanto indivíduos poderiam ganhar em média se sua escolaridade fosse alterada em um ambiente controlado.
+  4.1. Arrumar variável anos de estudo
+```{r}
+pnadc$VD3005 <- ifelse(pnadc$VD3005 == "Sem instrução e menos de 1 ano de estudo", 0, pnadc$VD3005)
+pnadc$VD3005 <- substring(pnadc$VD3005, first = 1, last = 2)
+pnadc$VD3005 <- as.numeric(pnadc$VD3005) 
+```
+
+  4.2. Média de rendimento mensal por anos de estudo
+```{r}
+media_rend_escolar <- aggregate(pnadc$Rendimento, by = list(anos_esc = pnadc$VD3005), FUN = mean, na.rm = TRUE)  # média por anos de estudo
+
+media_rend_escolar$anos_esc <-  as.numeric(media_rend_escolar$anos_esc)
+
+media_rend_escolar <- media_rend_escolar[order(media_rend_escolar$anos_esc), ]  # organizando por ano
+```
+
+  4.3. Plotar resultado
+```{r}
+ggplot(media_rend_escolar, aes(x = anos_esc, y = x)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Média de Rendimento por Ano de Estudo",
+       x = "Ano de Escolaridade",
+       y = "Média de Rendimento") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+  É importante notar que a mera correlação entre duas variáveis não é suficiente para estabelecer uma relação causal entre elas. 
+  A função de esperança condicional surge como uma ferramenta para calcular o valor esperado de uma variável aleatória, dadas certas informações adicionais. Por exemplo, em um estudo que visa entender os determinantes do rendimento dos indivíduos. Nesse caso, poderíamos usar a função de esperança condicional para estimar o rendimento médio de um indivíduo, levando em consideração variáveis como nível de escolaridade, experiência de trabalho, gênero, localização geográfica, entre outras.
