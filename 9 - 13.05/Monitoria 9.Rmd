@@ -1,0 +1,214 @@
+---
+title: "Monitoria 9"
+author: "Sinara"
+date: "2024-05-10"
+output: html_document
+---
+
+1. Introdução
+
+  Vamos supor que se deseja conhecer um parâmetro θ de certa característica de uma população representada por uma variável aleatória X com função densidade f(x;θ). Na estimação pontual, o valor de alguma estatística t(X1,X2,...,Xn) estima o parâmetro desconhecido θ.
+  
+  Exemplo: Suponha uma urna que contém bolas pretas e brancas e que a razão entre elas é de 3/1, mas não sabemos se há mais bolas pretas ou brancas. Assim, a probabilidade de retirar uma bola preta é 1/4 ou 3/4.
+```{r}
+# Parâmetros do problema
+set.seed(123)
+num_simulacoes <- 20
+proporcao_real_bolas_pretas <- 0.75
+tamanho_amostra <- 12
+
+# Simulação e estimação da proporção de bolas pretas na urna
+proporcoes_estimadas <- replicate(num_simulacoes, {
+  amostra <- sample(c("preta", "branca"), size = tamanho_amostra, replace = TRUE, prob = c(proporcao_real_bolas_pretas, 1 - proporcao_real_bolas_pretas))
+  mean(amostra == "preta")
+})
+
+# Histograma das proporções estimadas
+hist(proporcoes_estimadas, breaks = 40, main = "Estimação da proporção de bolas pretas na urna", xlab = "Proporção estimada", ylab = "Frequência")
+
+# Média das proporções estimadas
+
+```
+OBS: Quanto maior a amostra, mais próxima da média real se torna a média calculada.
+
+
+2. Função de densidade de probabilidade (pdf) conjunta
+   
+   Dizemos que X e Y são variáveis aleatórias independentes se a função densidade conjunta for o produto das densidades individuais, ou seja, f(x, y) = fX(x).fY(y)
+```{r}
+library(ggplot2)
+
+# Parâmetros das distribuições de X e Y
+media_X <- 0
+desvio_X <- 1
+media_Y <- 0
+desvio_Y <- 2
+
+# Valores de x e y
+x_vals <- seq(-3, 3, length.out = 100)
+y_vals <- seq(-5, 5, length.out = 100)
+
+# Densidades individuais para X e Y
+dens_X <- dnorm(x_vals, mean = media_X, sd = desvio_X)
+dens_Y <- dnorm(y_vals, mean = media_Y, sd = desvio_Y)
+par(mfrow = c(1, 2))
+plot(x_vals, dens_X, type = 'l', main = 'Densidade de X', xlab = 'X', ylab = 'Densidade', col = 'blue')
+plot(y_vals, dens_Y, type = 'l', main = 'Densidade de Y', xlab = 'Y', ylab = 'Densidade', col = 'blue')
+
+# Densidade conjunta como o produto das densidades individuais
+dens_conjunta <- outer(dens_X, dens_Y, "*")
+contour(x_vals, y_vals, ?, main = 'Dens. Conj. Produto', xlab = 'X', ylab = 'Y', col = rainbow(10))
+
+# Densidade conjunta usando a função de densidade conjunta
+dens_conjunta_calculada <- outer(dnorm(x_vals, media_X, desvio_X), dnorm(y_vals, media_Y, desvio_Y), "*")
+contour(x_vals, y_vals, ?, main = 'Dens. Conj. Calculada', xlab = 'X', ylab = 'Y', col = rainbow(10))
+```
+
+
+3. Função de Verossimilhança
+  
+   Para uma amostra aleatória (y1, ..., yn), a pdf conjunta vista como uma função do vetor de parâmetros desconhecidos θ é denominada de *função de verossimilhança*.
+  
+   A função de verossimilhança L(θ|Y) representa a probabilidade dos dados observados Y como uma função dos parâmetros θ. L(θ∣Y)=f(Y∣θ). Em muitos casos, é mais conveniente trabalhar com a log-verossimilhança. 
+  
+  O objetivo da função de verossimilhança é avaliar como a probabilidade dos dados varia com diferentes valores do parâmetro θ.
+  
+  O estimador θˆ é consistente e assintoticamente eficiente.
+
+ 
+4. Maximização da Verossimilhança
+ 
+  4.1. Como funciona a maximização da Verossimilhança?
+  
+  O Método da MV encontra o valor θˆ de θ que é o mais  verossímil possível tendo em vista os dados à mão. Ou seja, o estimador θˆ maximiza a probabilidade de gerar os dados que realmente temos.
+  
+  A maximização da verossimilhança costuma ser resolver uma otimização para encontrar os valores de θ que maximizam a função de verossimilhança. A resolução do problema consiste em "tentar" valores para o parâmetro até que um critério de convergência seja atendido.
+
+  4.2. Exemplos de estimação
+ 
+  4.2.1. Comparação Regressão Linear por OLS x MV
+```{r}
+# Dados de exemplo
+set.seed(123)
+x <- rnorm(1000, mean = 5, sd = 2)
+y <- 2 + 0.5 * x + rnorm(1000, mean = 0, sd = 1)
+
+# Mínimos Quadrados Ordinários
+modelo_mqo <- lm(y ~ x)
+summary(modelo_mqo)
+plot(x, y, main = "Regressão Linear por MQO", xlab = "X", ylab = "Y")
+abline(modelo_mqo, col = "red")
+
+# Máxima Verossimilhança
+library(MASS)
+modelo_mv <- glm(y ~ x, family = gaussian(link = "identity"))
+summary(modelo_mv)
+plot(x, y, main = "Regressão Linear por MV", xlab = "X", ylab = "Y")
+abline(coef(?), col = "blue")
+```
+
+  4.2.2. Regressão logística
+```{r}
+# Dados de exemplo
+set.seed(123)
+x <- rnorm(1000, mean = 0, sd = 1)
+y <- rbinom(1000, size = 1, prob = plogis(0.5 + 0.8 * x))  # Variável dependente binária
+
+# Modelo de regressão logística
+modelo_mv_lg <- glm(y ~ x, family = binomial(link = "logit"))
+
+```
+  
+  4.3. Regressão de poisson
+```{r}
+# Dados de exemplo
+set.seed(123)
+x <- rnorm(1000, mean = 2, sd = 1)
+y <- rpois(1000, exp(0.5 + 0.6 * x))  # Variável dependente com distribuição Poisson
+
+# Modelo de regressão de Poisson
+modelo_mv_ps <- glm(y ~ x, family = poisson(link = "log"))
+
+plot(x, y, main = "Regressão de Poisson", xlab = "X", ylab = "Y")
+lines(sort(x), predict(modelo_mv_ps, data.frame(x = sort(x)), type = "response"), col = "blue")
+```
+
+  
+5. Função de Verossimilhança concentrada
+  
+  É uma versão modificada da função de verossimilhança que se concentra apenas nos parâmetros de interesse da função de verossimilhança. Vantagem: facilidade de otimizar. Costuma-se realizar uma análise de sensibilidade, investigando-se como a função de verossimilhança e as estimativas dos parâmetros mudam quando os parâmetros são fixados ou modificados.
+```{r}
+# Dados de exemplo
+set.seed(123)
+x <- runif(1000, 0, 10)
+beta0 <- 2
+beta1 <- 1.5
+sigma <- 2
+epsilon <- rnorm(1000, 0, sigma)
+y <- ?
+
+# Função de verossimilhança concentrada
+funcao_verossimilhanca <- function(beta1, y, x, sigma) {
+  soma <- sum((y - (beta0 + beta1 * x))^2) / (2 * sigma^2)
+  return(-soma) 
+}
+
+# Estimar beta1 por otimização com método "Brent"
+resultado <- optimize(f = funcao_verossimilhanca, interval = c(-10, 10), y = y, x = x, sigma = sigma, maximum = TRUE)
+
+# Resultado beta1
+resultado$maximum
+```
+
+
+6. Testes de hipóteses baseados no princípio da Máxima Verossimilhança
+  
+  6.1. Teste da Razão da Verossimilhança (LR)
+  
+  Depois de estimar um modelo *restrito* (parâmetros ~θ) e um *irrestrito* (parâmetros ^θ) e testamos a H0: h(~θ) = 0. Se a restrição for verdadeira, o valor da função de verossimilhança avaliada em ~θ e ^θ devem estar próximos, indicando que a restrição faz sentido.
+```{r, warning=FALSE}
+library(lmtest)
+
+# Dados de exemplo
+set.seed(123)
+x1 <- rnorm(1000, mean = 5, sd = 2)
+x2 <- rnorm(1000, mean = 9, sd = 3)
+y <- 2 + 0.5 * x1 + 0.2 * x2 + rnorm(1000, mean = 0, sd = 1)
+
+# Modelos
+modelo_irrestrito <- glm(y ~ x1 + x2, family = gaussian(link = "identity"))
+modelo_restrito <- glm(y ~ 1, family = gaussian(link = "identity"))
+
+# Teste LR entre modelos
+teste_lr <- lrtest(modelo_restrito, modelo_irrestrito)
+
+```
+
+  6.2. Teste Wald
+  
+  Estimamos *apenas o modelo irrestrito* e identificamos se ele está perto de cumprir a restrição. H0: h(^θ) = 0
+```{r, warning=FALSE}
+# Teste Wald para o coeficiente de x1 no modelo completo
+teste_wald_x1 <- waldtest(modelo_irrestrito, "x1")
+
+teste_wald_x2 <- waldtest(modelo_irrestrito, "x2")
+```
+
+  6.3. Multiplicador de Lagrange ou Escore Eficiente (LM)
+  
+  Estimamos *apenas o modelo restrito*. Ou seja, devemos precisamos solucionar um problema de maximização condicionada. H0: h(~θ) = 0; A restrição é válida.
+  
+  Ressalta-se que os três testes são assintoticamente equivalentes.
+
+
+REFERÊNCIAS
+
+Estimador de Máxima Verossimilhança. Disponível em: <https://edisciplinas.usp.br/pluginfile.php/5891865/mod_resource/content/1/Aula%2015.pdf>. Acesso em: 10 de maio de 2024.
+
+PORTUGAL, Marcelo S. Notas Introdutórias Sobre o Princípio de Máxima Verossimilhança: Estimação e Teste de Hipóteses. Disponível em: <http://www.agg.ufba.br/maximavrossi.pdf>. Acesso em: 11 de maio de 2024.
+
+IME USP. Princípio de Máxima Verossimilhança. Disponível em: <https://www.ime.usp.br/~belitsky/wiki/lib/exe/fetch.php?media=teaching:teste_hip_proporcao_completo.pdf>. Acesso em: 11 de maio de 2024.
+
+PUC Rio. Distribuição de probabilidade conjunta. Disponível em: <https://www.maxwell.vrac.puc-rio.br/129/129_001.HTM>. Acesso em: 10 de maio de 2024.
+
+STEENBERGEN, Marco R. Maximum Likelihood Programming in R. Disponível em: <https://www.ime.unicamp.br/~cnaber/optim_1.pdf>. Acesso em: 10 de maio de 2024.

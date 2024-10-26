@@ -1,0 +1,137 @@
+---
+title: "Monitoria 8"
+author: "Sinara"
+date: "2024-05-03"
+output: html_document
+---
+
+1. Abrir bases
+```{r, warning=FALSE}
+library(readxl)
+base1 <- read_excel("base.xlsx", sheet = "inicio")
+base2 <- # leia a planilha que contém a variável pib_d
+```
+
+
+2. Juntar pib com pib defasado
+```{r}
+dados <- cbind(base1$pib, base2$pib_d)
+colnames(dados) <- c("pib", "pib_d")
+```
+
+
+3. Método Generalizado dos Momentos (GMM)
+
+  Permite estimar modelos com base em momentos condicionais (média, variância etc.) e estimar os parâmetros que melhor ajustam esses momentos aos dados.
+
+Dado o modelo: y_t = Beta1x_t + ε_t, x_t representa uma defasagem de y_t ou algum termo exógeno que explica y_t.
+  
+  Temos que: E(x_tε_t) = 0
+```{r}
+library(gmm)
+
+funcao_de_momentos <- function(beta, dados) {
+  y <- base1$pib
+  x <- base2$pib_d
+  moments <- x * (y - beta * x)
+  return(cbind(moments))
+}
+ 
+# Estimar o GMM
+gmm1 <- gmm(funcao_de_momentos, dados, t0 = 1,  method = "Brent", lower = -10, upper = 10)
+
+```
+OBS: O J-test de sobreidentificação é usado para testar a validade dos momentos instrumentais no GMM. A H0 é que os os momentos condicionais dos dados são iguais aos momentos condicionais especificados pelo modelo (momentos instrumentais escolhidos são válidos).
+OUTROS TESTES: Wald; Razão da Verossimilhança; Multiplicador de lagrange...
+
+
+4. Generalização de Hansen (1982) para o GMM
+ 
+  Lida com modelos mais complexos que envolvem dependência temporal e espacial entre as unidades observadas. Tem uma abordagem de duas etapas:
+  
+  *1ª*: Relaxamento da hipótese E(x_tε_t) = 0. Para isso, é preciso encontrar uma outra variável (zt) que: E(z_tx_t) ≠ 0; e E(z_tε_t) = 0.
+  
+  Ou seja, um estimador de variáveis instrumentais (IV)
+ 
+  *2ª*: Possibilidade de existir mais de uma variável correlacionada com x_t, porém independente de ε_t. Como haverá duas equações e uma icógnita, usa-se a matriz de covariância de momentos (matriz S) como ponderador - momentos com maior variância devem receber um peso menor.
+
+
+5. Estimação
+  
+  Se a estimação da matriz S for consistente, há três métodos principais de estimação por GMM:
+  
+  *Dois estágios*: 1º impõe-se a matriz identidade; 2º encontram-se os parâmetros do modelo.
+ 
+  *Sequencial*: repetição do método a dois estágios para encontrar os parâmetros do modelo. A iteração se encerra quando há convergência para o critério de convergência.
+ 
+  *Atualização contínua dos parâmetros*: a matriz de covariância é simultaneamente estimada com o vetor de parâmetros
+```{r}
+gmm2 <- gmm(funcao_de_momentos, dados, t0 = 1, type = "iterative", method = "Brent", lower = -10, upper = 10)
+summary(gmm2)
+# basta ajustar o parâmetro "type" na função: type=c("twoStep","iterative", "cue")
+```
+
+
+6. Análise da estrutura dos dados
+ 
+  6.1. Autocovariância
+  
+  Descreve a covariância entre uma série temporal e uma versão atrasada de si mesma. É usada para capturar padrões de dependência temporal nos dados.
+  
+  Cov(X_t,X_t+k ) = E[(X_t−μ)(Xt+k−μ)], onde k é o número de defasagens
+```{r}
+#Abrir dados IPCA - dados mensais de janeiro/2012 a janeiro/2017
+base3 <- # leia a planilha que contém a variável ipca
+
+autocov <- acf(base3[,1], lag.max = 10, type = "covariance", plot = TRUE)
+autocov
+```
+
+  6.2. Variância de longo prazo
+ 
+  É uma medida da variabilidade ou dispersão dos valores de uma série temporal ao longo de períodos de tempo mais extensos.
+```{r}
+library(robcp)
+
+x <- base3$IPCA
+
+variancia_longo_prazo <- lrv(x, method = "kernel", control = list())
+variancia_longo_prazo
+```
+  É utilizada para padronizar testes relacionados à média em dados dependentes.
+  
+  
+7. Calculando a Matriz de Covariância de Momentos (S)
+ 
+  Descreve as relações de covariância entre os momentos de uma distribuição estatística ou de um conjunto de dados. Existem várias formas de calculá-la, sendo as mais comuns descritas a seguir:
+ 
+  7.1. Newey-West
+ 
+   Estima a matriz S em séries temporais que podem exibir autocorrelação serial, ou seja, leva em consideração a dependência serial nos dados e corrige o viés causado pela autocorrelação.
+```{r}
+library(sandwich)
+
+covariancia_longo_prazo_NW <- lrvar(dados, type = "Newey-West")
+covariancia_longo_prazo_NW
+```   
+   
+  7.2. Densidade Espectral
+  
+  Baseada na análise de frequência dos dados, utiliza a transformada de Fourier ou outras técnicas de análise espectral para calcular a matriz de covariância de momentos em termos de frequência.  
+```{r}
+covariancia_longo_prazo_AD <- lrvar(dados, type = "Andrews")
+covariancia_longo_prazo_AD
+```
+
+  7.3. Branqueamento e coloração
+  
+  Combina o Newey-West com o estimador espectral e supõe que os momentos têm um alto grau de persistência.
+
+No Hansen: Capítulo 13 - Generalized Method of Moments
+REFERÊNCIAS
+
+Rdocumentation. gmm: Generalized method of moment estimation. Disponível em: https://www.rdocumentation.org/packages/gmm/versions/1.8/topics/gmm>. Acesso em: 04 de maio de 2024.
+
+LOST. Generalized Method of Moments. Disponível em: <https://lost-stats.github.io/Model_Estimation/GLS/gmm.html>. Acesso em 04 de maio de 2024.
+
+TABOGA, Marco. Covariance Matrix. Disponível em: <https://www.statlect.com/fundamentals-of-probability/covariance-matrix>. Acesso em: 05 de maio de 2024.
